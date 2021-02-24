@@ -167,7 +167,7 @@ int ipc_client_send_command_to_connection(
 
 	if (read_packetized_to_strbuf(
 		    connection->fd, answer,
-		    PACKET_READ_GENTLE_ON_EOF | PACKET_READ_NEVER_DIE) < 0) {
+		    PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR) < 0) {
 		ret = error(_("could not read IPC response"));
 		goto done;
 	}
@@ -481,7 +481,7 @@ static int worker_thread__do_io(
 
 	ret = read_packetized_to_strbuf(
 		reply_data.fd, &buf,
-		PACKET_READ_GENTLE_ON_EOF | PACKET_READ_NEVER_DIE);
+		PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR);
 	if (ret >= 0) {
 		ret = worker_thread_data->server_data->application_cb(
 			worker_thread_data->server_data->application_data,
@@ -741,7 +741,7 @@ static int create_listener_socket(
 	uslg_opts.listen_backlog_size = LISTEN_BACKLOG;
 	uslg_opts.disallow_chdir = ipc_opts->uds_disallow_chdir;
 
-	ret = unix_stream_server__create(path, &uslg_opts, &server_socket);
+	ret = unix_stream_server__create(path, &uslg_opts, -1, &server_socket);
 	if (ret)
 		return ret;
 

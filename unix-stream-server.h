@@ -18,6 +18,7 @@ struct unix_stream_server_socket {
 int unix_stream_server__create(
 	const char *path,
 	const struct unix_stream_listen_opts *opts,
+	long timeout_ms,
 	struct unix_stream_server_socket **server_socket);
 
 /*
