@@ -252,23 +252,21 @@ void packet_buf_write_len(struct strbuf *buf, const char *data, size_t len)
 
 int write_packetized_from_fd_no_flush(int fd_in, int fd_out)
 {
+	char *buf = xmalloc(LARGE_PACKET_DATA_MAX);
 	int err = 0;
 	ssize_t bytes_to_write;
-	char *buf = xmalloc(LARGE_PACKET_DATA_MAX);
 
 	while (!err) {
 		bytes_to_write = xread(fd_in, buf, LARGE_PACKET_DATA_MAX);
 		if (bytes_to_write < 0) {
-			err = COPY_READ_ERROR;
-			break;
+			free(buf);
+			return COPY_READ_ERROR;
 		}
 		if (bytes_to_write == 0)
 			break;
 		err = packet_write_gently(fd_out, buf, bytes_to_write);
 	}
-
 	free(buf);
-
 	return err;
 }
 
@@ -308,7 +306,7 @@ static int get_packet_data(int fd, char **src_buf, size_t *src_size,
 	} else {
 		ret = read_in_full(fd, dst, size);
 		if (ret < 0) {
-			if (options & PACKET_READ_NEVER_DIE)
+			if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
 				return error_errno(_("read error"));
 			die_errno(_("read error"));
 		}
@@ -319,7 +317,7 @@ static int get_packet_data(int fd, char **src_buf, size_t *src_size,
 		if (options & PACKET_READ_GENTLE_ON_EOF)
 			return -1;
 
-		if (options & PACKET_READ_NEVER_DIE)
+		if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
 			return error(_("the remote end hung up unexpectedly"));
 		die(_("the remote end hung up unexpectedly"));
 	}
@@ -349,7 +347,7 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 	len = packet_length(linelen);
 
 	if (len < 0) {
-		if (options & PACKET_READ_NEVER_DIE)
+		if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
 			return error(_("protocol error: bad line length "
 				       "character: %.4s"), linelen);
 		die(_("protocol error: bad line length character: %.4s"), linelen);
@@ -366,7 +364,7 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 		*pktlen = 0;
 		return PACKET_READ_RESPONSE_END;
 	} else if (len < 4) {
-		if (options & PACKET_READ_NEVER_DIE)
+		if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
 			return error(_("protocol error: bad line length %d"),
 				     len);
 		die(_("protocol error: bad line length %d"), len);
@@ -374,7 +372,7 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 
 	len -= 4;
 	if ((unsigned)len >= size) {
-		if (options & PACKET_READ_NEVER_DIE)
+		if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
 			return error(_("protocol error: bad line length %d"),
 				     len);
 		die(_("protocol error: bad line length %d"), len);

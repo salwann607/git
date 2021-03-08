@@ -223,7 +223,7 @@ int ipc_client_send_command_to_connection(
 
 	if (read_packetized_to_strbuf(
 		    connection->fd, answer,
-		    PACKET_READ_GENTLE_ON_EOF | PACKET_READ_NEVER_DIE) < 0) {
+		    PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR) < 0) {
 		ret = error(_("could not read IPC response"));
 		goto done;
 	}
@@ -450,7 +450,7 @@ static int do_io(struct ipc_server_thread_data *server_thread_data)
 
 	ret = read_packetized_to_strbuf(
 		reply_data.fd, &buf,
-		PACKET_READ_GENTLE_ON_EOF | PACKET_READ_NEVER_DIE);
+		PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR);
 	if (ret >= 0) {
 		ret = server_thread_data->server_data->application_cb(
 			server_thread_data->server_data->application_data,

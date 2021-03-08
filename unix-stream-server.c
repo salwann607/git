@@ -3,7 +3,7 @@
 #include "unix-socket.h"
 #include "unix-stream-server.h"
 
-#define DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT (100)
+#define DEFAULT_LOCK_TIMEOUT (100)
 
 /*
  * Try to connect to a unix domain socket at `path` (if it exists) and
@@ -22,7 +22,6 @@ static int is_another_server_alive(const char *path,
 				   const struct unix_stream_listen_opts *opts)
 {
 	int fd = unix_stream_connect(path, opts->disallow_chdir);
-
 	if (fd >= 0) {
 		close(fd);
 		return 1;
@@ -34,23 +33,22 @@ static int is_another_server_alive(const char *path,
 int unix_stream_server__create(
 	const char *path,
 	const struct unix_stream_listen_opts *opts,
+	long timeout_ms,
 	struct unix_stream_server_socket **new_server_socket)
 {
 	struct lock_file lock = LOCK_INIT;
-	long timeout;
 	int fd_socket;
 	struct unix_stream_server_socket *server_socket;
 
 	*new_server_socket = NULL;
 
-	timeout = opts->timeout_ms;
-	if (opts->timeout_ms <= 0)
-		timeout = DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT;
+	if (timeout_ms < 0)
+		timeout_ms = DEFAULT_LOCK_TIMEOUT;
 
 	/*
 	 * Create a lock at "<path>.lock" if we can.
 	 */
-	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout) < 0)
+	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout_ms) < 0)
 		return -1;
 
 	/*
